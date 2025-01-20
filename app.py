@@ -1,17 +1,21 @@
 # app.py
 import configparser
+import os
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
-from bkanalysis.ui import ui, ui_old
-from bkanalysis.ui.salary import Salary
+
+# from bkanalysis.ui import ui, ui_old
+from bkanalysis.salary import Salary
 from bkanalysis.config import config_helper as ch
+from bkanalysis.manager import DataManager, MarketManager, TransformationManager, FigureManager
 from dash import Dash, Input, Output, dcc, html
 
 import tabs
-from lib import utils, defaults
+from src import defaults
 
 
+REF_CURRENCY = "USD"
 DEFAULT_YEAR = datetime.today().year - 1
 BASE_SALARY = {**{y: None for y in defaults.YEARS}, **{2024: defaults.BASE_SALARY_1}}
 DEFAULT_CONFIG = ch.source
@@ -21,8 +25,18 @@ if len(config.read(ch.source)) != 1:
     raise OSError(f"no config found in {ch.source}")
 
 ### Get Data From Cache
-fd = utils.read_csv("data", defaults.REF_CURRENCY, config)
-CATEGORIES = fd.get_all_categories([datetime(DEFAULT_YEAR, 1, 1), datetime(DEFAULT_YEAR, 12, 31)], defaults.THRESHOLD)
+data_manager = DataManager(config)
+data_manager.load_pregenerated_data(os.path.join("data", "data_manager.csv"))
+
+market_manager = MarketManager(REF_CURRENCY)
+market_manager.load_pregenerated_data(os.path.join("data", "data_market.csv"))
+
+transformation_manager = TransformationManager(data_manager, market_manager)
+transformation_manager.group_transaction()
+
+figure_manager = FigureManager(transformation_manager)
+
+CATEGORIES = transformation_manager.get_all_categories([datetime(DEFAULT_YEAR, 1, 1), datetime(DEFAULT_YEAR, 12, 31)], defaults.THRESHOLD)
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -174,10 +188,14 @@ def update_tab_1(selected_year, include_capital_gain):
     end_date = datetime(selected_year, 12, 31)
     date_range = [start_date, end_date]
 
-    df_cash_account_type = fd.get_wealth_by_account_type(date_range)
-    total_value_end, total_value_start, total_spend = fd.get_total_wealth(date_range)
+    df_cash_account_type = transformation_manager.get_price_comparison_on_dates(date_range[0], date_range[1], True)
+
+    total_value_start = df_cash_account_type.sum()[f"{date_range[0].date():%b-%y}"]
+    total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
+    total_spend = transformation_manager.get_flow_values(date_range, None, how="out", include_iat=False).Value.sum()
+
     salary = Salary(
-        fd.df_exp,
+        transformation_manager,
         date_range[1].year,
         datetime(selected_year - 1, 1, 1),
         BASE_SALARY[selected_year],
@@ -189,27 +207,13 @@ def update_tab_1(selected_year, include_capital_gain):
         defaults.EXCLUDE_DEFAULT,
     )
 
-    capital_pnl = fd.get_capital_gain(date_range)
+    # fd.get_capital_gain(date_range)
+    capital_pnl = transformation_manager.get_values_by_asset(date_range, None).CapitalGain.sum()
 
     ### Get Figures
-    fig_spend_waterfall = ui.plot_spend_waterfall(
-        fd.df_exp,
-        date_range,
-        salary_override=salary,
-        inc_title=True,
-        include_capital_gain=include_capital_gain,
-    )
+    fig_spend_waterfall = figure_manager.get_figure_waterfall(date_range, salary_override=salary, include_capital_gain=include_capital_gain)
 
-    fig_wealth = ui.plot_wealth(
-        fd.df,
-        date_range=date_range,
-        by=([ui.CUMULATED_AMOUNT_CCY_EXCL_CAPITAL, ui.CUMULATED_AMOUNT_CCY] if include_capital_gain else ui.CUMULATED_AMOUNT_CCY_EXCL_CAPITAL),
-        top_items_count=5,
-        rename={
-            ui.CUMULATED_AMOUNT_CCY: "With Cap Gain",
-            ui.CUMULATED_AMOUNT_CCY_EXCL_CAPITAL: "No Cap Gain",
-        },
-    )
+    fig_wealth = figure_manager.get_figure_timeseries(date_range)
 
     return tabs.get_tab_1(
         df_cash_account_type,
@@ -235,27 +239,17 @@ def update_tab_2(selected_year, category):
     date_range = [start_date, end_date]
 
     category_key, category_value = category.split(": ")
-    _, _, total_spend = fd.get_total_wealth(date_range)
+
+    total_spend = transformation_manager.get_flow_values(date_range, None, how="out", include_iat=False).Value.sum()
 
     ### Get Figures
-    df_category_brkdn = fd.get_category_breakdown(date_range, f"Full{category_key}", category_value, defaults.CATEGORY_MAP[category_key], 10)
-    fig_category_brkdn = ui.plot_category_breakdown(
-        fd.df_exp,
-        f"Full{category_key}",
-        category_value,
-        defaults.CATEGORY_MAP[category_key],
-        date_range,
-        None,
-        5,
-        [],
-    )
+    category_dict = {f"Full{category_key}": category_value}
+    label = "MemoMapped"
 
-    fig_spend_brkdn = ui_old.plot_sunburst(
-        fd.df_exp,
-        ["FullType", "FullSubType", "MemoMapped"],
-        date_range=date_range,
-        values=ui.AMOUNT_CCY,
-    )
+    df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None)
+    fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, 5, date_range)
+
+    fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range)
 
     return tabs.get_tab_2(total_spend, category_value, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn)
 

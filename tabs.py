@@ -251,7 +251,7 @@ def get_tab_1(
 def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn):
     """Returns the layout of the second tab"""
 
-    category_spend = df_category_brkdn[ui.AMOUNT_CCY].sum()
+    category_spend = df_category_brkdn["Value"].sum()
     category_spend_color = get_color(category_spend)
 
     return dbc.Row(

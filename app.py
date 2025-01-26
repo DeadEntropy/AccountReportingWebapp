@@ -192,7 +192,7 @@ def update_tab_1(selected_year, include_capital_gain):
 
     total_value_start = df_cash_account_type.sum()[f"{date_range[0].date():%b-%y}"]
     total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
-    total_spend = transformation_manager.get_flow_values(date_range, None, how="out", include_iat=False).Value.sum()
+    total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
 
     salary = Salary(
         transformation_manager,
@@ -240,7 +240,7 @@ def update_tab_2(selected_year, category):
 
     category_key, category_value = category.split(": ")
 
-    total_spend = transformation_manager.get_flow_values(date_range, None, how="out", include_iat=False).Value.sum()
+    total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
 
     ### Get Figures
     category_dict = {f"Full{category_key}": category_value}

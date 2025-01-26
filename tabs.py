@@ -274,6 +274,7 @@ def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_cat
                                             ),
                                         ]
                                     ),
+                                    id="total-spending-card",
                                     className="mb-3",
                                 )
                             ),

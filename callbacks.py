@@ -79,7 +79,7 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         label = "MemoMapped"
 
         df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None)
-        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, 5, date_range)
+        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range)
 
         fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range)
 

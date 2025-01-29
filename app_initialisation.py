@@ -3,7 +3,7 @@ import configparser
 import os
 
 from bkanalysis.config import config_helper as ch
-from bkanalysis.managers import DataManager, MarketManager, TransformationManager, TransformationManagerCache, FigureManager
+from bkanalysis.managers import DataManager, MarketManager, TransformationManagerCache, FigureManager
 
 
 def initialize_managers(ref_currency: str, default_year: int):
@@ -18,8 +18,7 @@ def initialize_managers(ref_currency: str, default_year: int):
     market_manager = MarketManager(ref_currency)
     market_manager.load_pregenerated_data(os.path.join("data", "data_market.csv"))
 
-    # transformation_manager = TransformationManagerCache(data_manager, market_manager, default_year, None, ["both", "out"])
-    transformation_manager = TransformationManager(data_manager, market_manager)
+    transformation_manager = TransformationManagerCache(data_manager, market_manager, default_year, None, ["both", "out"])
 
     figure_manager = FigureManager(transformation_manager)
 

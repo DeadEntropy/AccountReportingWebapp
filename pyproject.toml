@@ -1,2 +1,10 @@
 [tool.black]
-line-length = 180  # Adjust line length to your preferred value
+line-length = 180
+
+[build-system]
+requires = ["setuptools", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "dirty-tag"

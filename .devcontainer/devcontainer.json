@@ -7,7 +7,11 @@
 		"context": "..",
 		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
 		"dockerfile": "../Dockerfile"
-	}
+	},
+	"runArgs": [
+	  "-e", "DATA_PATH=/data",
+	  "-v", "/c/GitHub/data:/data"
+	],
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

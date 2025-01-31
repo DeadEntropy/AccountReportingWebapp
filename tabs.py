@@ -325,7 +325,6 @@ def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_cat
                             "lineHeight": "15px",  # Adjust line height for compactness
                         },
                         style_header={
-                            "backgroundColor": "lightgrey",
                             "fontWeight": "bold",
                         },
                         style_data_conditional=[],

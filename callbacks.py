@@ -1,11 +1,12 @@
 # callbacks.py
 from datetime import datetime
 from dash import Input, Output
+
 from bkanalysis.salary import Salary
+from bkanalysis.managers import TransformationManager, TransformationManagerCache, FigureManager
+
 from src import defaults
 import tabs
-
-from bkanalysis.managers import TransformationManager, TransformationManagerCache, FigureManager
 
 
 def register_callbacks(app, transformation_manager: TransformationManager | TransformationManagerCache, figure_manager: FigureManager, base_salary):
@@ -65,22 +66,20 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         Output("tab2", "children"),
         [Input("year-dropdown", "value"), Input("category-dropdown", "value")],
     )
-    def update_tab_2_year(selected_year, category):
+    def update_tab_2(selected_year, category):
         """Update the second tab of the webapp."""
         start_date = datetime(selected_year, 1, 1)
         end_date = datetime(selected_year, 12, 31)
         date_range = [start_date, end_date]
 
-        category_key, category_value = category.split(": ")
-
+        fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range)
         total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
 
+        category_key, category_value = category.split(": ")
         category_dict = {f"Full{category_key}": category_value}
         label = "MemoMapped"
 
         df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None)
         fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range)
-
-        fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range)
 
         return tabs.get_tab_2(total_spend, category_value, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn)

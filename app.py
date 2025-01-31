@@ -1,15 +1,21 @@
 # app.py
 from datetime import datetime
 
-from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
-from src import defaults
+import plotly.io as pio
+from dash import Dash, dcc, html
 
+from app_initialisation import initialize_managers
+from callbacks import register_callbacks
 from layouts.control_panel import get_control_panel
 from layouts.tabs import get_tabs
 from layouts.title import get_title
-from callbacks import register_callbacks
-from app_initialisation import initialize_managers
+from src import defaults
+
+USE_DARK_MODE = False
+
+if USE_DARK_MODE:
+    pio.templates.default = "plotly_dark"  # or your custom template
 
 REF_CURRENCY = "USD"
 DEFAULT_YEAR = datetime.today().year - 1
@@ -19,12 +25,12 @@ data_manager, market_manager, transformation_manager, figure_manager = initializ
 
 CATEGORIES = transformation_manager.get_all_categories([datetime(DEFAULT_YEAR, 1, 1), datetime(DEFAULT_YEAR, 12, 31)], defaults.THRESHOLD)
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.CYBORG if USE_DARK_MODE else dbc.themes.BOOTSTRAP])
 
 app.layout = dbc.Container(
     [
         get_title(),
-        html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+        html.Hr(style={"borderTop": "2px solid", "marginTop": "10px", "marginBottom": "10px"}),
         dcc.Loading(
             id="loading-indicator",
             type="circle",
@@ -36,7 +42,7 @@ app.layout = dbc.Container(
         ),
     ],
     fluid=True,
-    style={"backgroundColor": "#f8f9fa", "padding": "10px", "position": "relative"},  # Added relative position
+    style={"padding": "10px", "position": "relative"},  # Added relative position
 )
 
 register_callbacks(app, transformation_manager, figure_manager, BASE_SALARY)

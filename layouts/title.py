@@ -11,7 +11,6 @@ def get_title():
                 "Year-End Spending Analysis",
                 className="text-center",
                 style={
-                    "color": "#2c3e50",
                     "fontWeight": "bold",
                     "fontSize": "1.8rem",  # Reduced font size
                     "marginBottom": "15px",  # Reduced margin

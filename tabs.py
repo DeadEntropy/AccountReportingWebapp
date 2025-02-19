@@ -378,7 +378,7 @@ def get_tab_3(capital_df, capital_fig):
                 "type": "numeric",
                 "format": Format(
                     precision=1,
-                    scheme=Scheme.fixed,
+                    scheme=Scheme.percentage,
                     group=True,
                 ),
             },

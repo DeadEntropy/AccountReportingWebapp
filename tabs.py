@@ -2,9 +2,9 @@ from dash import dcc, html, dash_table
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
 from bkanalysis.ui.salary import Salary
-from bkanalysis.ui import ui
 
 ACCOUNT_TYPE = "AccountType"
+ASSET_MAPPED = "AssetMapped"
 
 
 def get_color(v):
@@ -295,14 +295,14 @@ def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_cat
                             ),
                         ]
                     ),
-                    dcc.Graph(figure=fig_spend_brkdn, style={"height": "600px"}),
+                    dcc.Graph(id="fig_spend_brkdn", figure=fig_spend_brkdn, style={"height": "600px"}),
                 ],  # Top-right
                 width=6,
                 style={"display": "flex", "flexDirection": "column", "height": "100%"},
             ),
             dbc.Col(
                 [
-                    dcc.Graph(figure=fig_category_brkdn),  # Bottom-left
+                    dcc.Graph(id="fig_category_brkdn", figure=fig_category_brkdn),  # Bottom-left
                     dash_table.DataTable(
                         columns=[
                             {
@@ -333,6 +333,116 @@ def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_cat
                 ],
                 width=6,
                 style={"display": "flex", "flexDirection": "column", "height": "100%"},
+            ),
+        ]
+    )
+
+
+def get_tab_3(capital_df, capital_fig):
+    """Returns the layout of the 'Capital Breakdown' tab"""
+    assert capital_df.columns[0] == ASSET_MAPPED, f"Incorrect Columns, expected {ASSET_MAPPED} but got {capital_df.columns[0]}."
+    start_value = capital_df.columns[1]
+    capital_gain = capital_df.columns[2]
+    yoy_return = capital_df.columns[3]
+
+    dash_tbl_capital = dash_table.DataTable(
+        columns=[
+            {
+                "name": "Asset Code",
+                "id": "AssetMapped",
+                "type": "text",
+            },
+            {
+                "name": start_value,
+                "id": start_value,
+                "type": "numeric",
+                "format": Format(
+                    precision=0,
+                    scheme=Scheme.fixed,
+                    group=True,
+                ),
+            },
+            {
+                "name": capital_gain,
+                "id": capital_gain,
+                "type": "numeric",
+                "format": Format(
+                    precision=0,
+                    scheme=Scheme.fixed,
+                    group=True,
+                ),
+            },
+            {
+                "name": yoy_return,
+                "id": yoy_return,
+                "type": "numeric",
+                "format": Format(
+                    precision=1,
+                    scheme=Scheme.fixed,
+                    group=True,
+                ),
+            },
+        ],
+        data=capital_df.to_dict("records"),
+        style_table={"overflowX": "auto"},  # Handle table overflow
+        style_cell={
+            "textAlign": "left",
+            "padding": "5px",  # Reduced padding for smaller row height
+            "lineHeight": "15px",  # Adjust line height for compactness
+        },
+        style_header={
+            "backgroundColor": "lightgrey",
+            "fontWeight": "bold",
+        },
+        style_data_conditional=[
+            {
+                "if": {
+                    "filter_query": f"{{{capital_gain}}} > 0",
+                    "column_id": capital_gain,
+                },
+                "color": "green",
+                "fontWeight": "bold",
+            },
+            {
+                "if": {
+                    "filter_query": f"{{{capital_gain}}} < 0",
+                    "column_id": capital_gain,
+                },
+                "color": "red",
+                "fontWeight": "bold",
+            },
+            {
+                "if": {
+                    "filter_query": f"{{{yoy_return}}} > 0",
+                    "column_id": yoy_return,
+                },
+                "color": "green",
+                "fontWeight": "bold",
+            },
+            {
+                "if": {
+                    "filter_query": f"{{{yoy_return}}} < 0",
+                    "column_id": yoy_return,
+                },
+                "color": "red",
+                "fontWeight": "bold",
+            },
+        ],
+        style_as_list_view=True,  # Render rows more compactly
+    )
+
+    return dbc.Row(
+        [
+            html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+            dbc.Col(
+                dbc.Row(
+                    [
+                        dbc.Col(dcc.Graph(id="capital_fig", figure=capital_fig), width=6),
+                        dbc.Col(dash_tbl_capital, width=6),
+                    ],
+                    className="border p-3",
+                ),
+                width=12,
             ),
         ]
     )

@@ -8,7 +8,7 @@ from dash import Dash, dcc, html
 from app_initialisation import initialize_managers
 from callbacks import register_callbacks
 from layouts.control_panel import get_control_panel
-from layouts.tabs import get_tabs
+from layouts.tabs_container import get_tabs
 from layouts.title import get_title
 from src import defaults
 
@@ -45,7 +45,7 @@ app.layout = dbc.Container(
     style={"padding": "10px", "position": "relative"},  # Added relative position
 )
 
-register_callbacks(app, transformation_manager, figure_manager, BASE_SALARY)
+register_callbacks(app, transformation_manager, figure_manager, BASE_SALARY, CATEGORIES)
 
 if __name__ == "__main__":
     app.run_server(host="0.0.0.0", port=8050, debug=False)

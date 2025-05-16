@@ -2,7 +2,7 @@
 from datetime import datetime
 from dash import Input, Output
 
-from bkanalysis.salary import Salary
+from bkanalysis.salary import Salary, SalaryLegacy
 from bkanalysis.managers import TransformationManager, TransformationManagerCache, FigureManager
 
 from src import defaults
@@ -20,7 +20,7 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         """Callback to update the 'Wealth Breakdown' tab."""
         include_capital_gain = "include_capital_gain" in include_capital_gain  # Convert the list to a boolean
 
-        start_date = datetime(selected_year, 1, 1)
+        start_date = datetime(selected_year - 1, 12, 31)
         end_date = datetime(selected_year, 12, 31)
         date_range = [start_date, end_date]
 
@@ -30,17 +30,17 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
         total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
 
-        salary = Salary(
+        salary = SalaryLegacy(
             transformation_manager,
             date_range[1].year,
             datetime(selected_year - 1, 1, 1),
             base_salary[selected_year],
-            defaults.DEFAULT_PAYROLLS_1,
+            defaults.DEFAULT_PAYROLLS_1.copy(),
             defaults.BASE_PAYROLL_1,
             None,
-            defaults.DEFAULT_PAYROLLS_2,
+            defaults.DEFAULT_PAYROLLS_2.copy(),
             defaults.BASE_PAYROLL_2,
-            defaults.EXCLUDE_DEFAULT,
+            defaults.EXCLUDE_DEFAULT.copy(),
         )
 
         capital_pnl = transformation_manager.get_values_by_asset(date_range, None).CapitalGain.sum()
@@ -70,16 +70,17 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         start_date = datetime(selected_year, 1, 1)
         end_date = datetime(selected_year, 12, 31)
         date_range = [start_date, end_date]
+        how = "out"
 
-        fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range)
-        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
+        fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range, how=how)
+        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=how, include_iat=False).Value.sum()
 
         category_key, category_value = category.split(": ")
         category_dict = {f"Full{category_key}": category_value}
         label = "MemoMapped"
 
-        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None)
-        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range)
+        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None, how=how)
+        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range, how=how)
 
         return tabs.get_tab_2(total_spend, category_value, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn)
 

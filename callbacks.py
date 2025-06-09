@@ -30,18 +30,7 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
         total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
 
-        salary = SalaryLegacy(
-            transformation_manager,
-            date_range[1].year,
-            datetime(selected_year - 1, 1, 1),
-            base_salary[selected_year],
-            defaults.DEFAULT_PAYROLLS_1.copy(),
-            defaults.BASE_PAYROLL_1,
-            None,
-            defaults.DEFAULT_PAYROLLS_2.copy(),
-            defaults.BASE_PAYROLL_2,
-            defaults.EXCLUDE_DEFAULT.copy(),
-        )
+        salary = prepare_salary(selected_year, date_range)
 
         capital_pnl = transformation_manager.get_values_by_asset(date_range, None).CapitalGain.sum()
 
@@ -58,6 +47,31 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
             capital_pnl,
             fig_spend_waterfall,
             fig_wealth,
+        )
+
+    def prepare_salary(selected_year, date_range):
+        """Prepare the salary object for the selected year."""
+
+        if defaults.USE_LEGACY_SALARY_CLASS:
+            return SalaryLegacy(
+                transformation_manager,
+                date_range[1].year,
+                datetime(selected_year - 1, 1, 1),
+                base_salary[selected_year],
+                defaults.DEFAULT_PAYROLLS_1.copy(),
+                defaults.BASE_PAYROLL_1,
+                None,
+                defaults.DEFAULT_PAYROLLS_2.copy(),
+                defaults.BASE_PAYROLL_2,
+                defaults.EXCLUDE_DEFAULT.copy(),
+            )
+
+        return Salary(
+            transformation_manager,
+            date_range[1].year,
+            datetime(selected_year - 1, 1, 1),
+            defaults.SALARY_CONFIG,
+            defaults.EXCLUDE_DEFAULT.copy(),
         )
 
     #

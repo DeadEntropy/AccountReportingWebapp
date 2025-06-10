@@ -5,17 +5,21 @@ DEFAULT_PAYROLLS_2 = ["UBS SALARY", "UBS BONUS"]
 BASE_PAYROLL_2 = "UBS"
 EXCLUDE_DEFAULT = []
 BASE_SALARY_1 = 13250
-USE_LEGACY_SALARY_CLASS = True
+USE_LEGACY_SALARY_CLASS = False
 
 SALARY_CONFIG = {
     "NAYA_CYTOVIA": {
-        "base_salary": 13250,
+        "base_salary": None,
         "payrolls": [
             "NAYA BIOSCIENCES PAYROLL",
             "CYTOVIA THERAPEUTICS",
             "NAYA ONCOLOGY",
             "TRINET HR CORPORATE PAYROLL",
         ],
+    },
+    "MEDICUS_PHARMA": {
+        "base_salary": None,
+        "payrolls": ["MEDICUS PHARMA"],
     },
     "UBS": {
         "base_salary": None,

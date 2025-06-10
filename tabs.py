@@ -446,3 +446,25 @@ def get_tab_3(capital_df, capital_fig):
             ),
         ]
     )
+
+
+def get_tab_4():
+    """Returns the layout of the 'Saving Rate' tab"""
+
+    dash_tbl_capital = dash_table.DataTable()
+
+    return dbc.Row(
+        [
+            html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+            dbc.Col(
+                dbc.Row(
+                    [
+                        # dbc.Col(dcc.Graph(id="capital_fig", figure=capital_fig), width=6),
+                        dbc.Col(dash_tbl_capital, width=6),
+                    ],
+                    className="border p-3",
+                ),
+                width=12,
+            ),
+        ]
+    )

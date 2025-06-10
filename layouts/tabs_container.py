@@ -31,6 +31,7 @@ def get_tabs():
                     dcc.Tab(label="Tab 1: Wealth Breakdown", id="tab1", style=tab_style, selected_style=tab_selected_style),
                     dcc.Tab(label="Tab 2: Spending Details", id="tab2", style=tab_style, selected_style=tab_selected_style),
                     dcc.Tab(label="Tab 3: Capital PnL Breakdown", id="tab3", style=tab_style, selected_style=tab_selected_style),
+                    dcc.Tab(label="Tab 4: Saving Rate", id="tab4", style=tab_style, selected_style=tab_selected_style),
                 ],
                 style=tabs_styles,  # Adjusted margin
             ),

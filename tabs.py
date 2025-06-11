@@ -346,6 +346,7 @@ def get_tab_3(capital_df, capital_fig):
     yoy_return = capital_df.columns[3]
 
     dash_tbl_capital = dash_table.DataTable(
+        id="capital_tbl",
         columns=[
             {
                 "name": "Asset Code",
@@ -429,6 +430,8 @@ def get_tab_3(capital_df, capital_fig):
             },
         ],
         style_as_list_view=True,  # Render rows more compactly
+        # row_selectable="single",  # enable click-to-select
+        # selected_rows=[],  # start with none selected
     )
 
     return dbc.Row(
@@ -448,22 +451,28 @@ def get_tab_3(capital_df, capital_fig):
     )
 
 
-def get_tab_4():
+def get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly):
     """Returns the layout of the 'Saving Rate' tab"""
-
-    dash_tbl_capital = dash_table.DataTable()
 
     return dbc.Row(
         [
             html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
             dbc.Col(
-                dbc.Row(
-                    [
-                        # dbc.Col(dcc.Graph(id="capital_fig", figure=capital_fig), width=6),
-                        dbc.Col(dash_tbl_capital, width=6),
-                    ],
-                    className="border p-3",
-                ),
+                children=[
+                    dbc.Row(
+                        [
+                            dbc.Col(dcc.Graph(id="saving_ratio_annual_fig", figure=saving_ratio_annual), width=6),
+                            dbc.Col(dcc.Graph(id="saving_ratio_monthly_fig", figure=saving_ratio_monthly), width=6),
+                        ],
+                        className="border p-3",
+                    ),
+                    dbc.Row(
+                        [
+                            dbc.Col(dcc.Graph(id="income_vs_expenses_fig", figure=income_vs_expenses), width=12),
+                        ],
+                        className="border p-3",
+                    ),
+                ],
                 width=12,
             ),
         ]

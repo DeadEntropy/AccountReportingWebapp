@@ -1,6 +1,6 @@
 # callbacks.py
 from datetime import datetime
-from dash import Input, Output
+from dash import Input, Output, State, exceptions
 
 from bkanalysis.salary import Salary, SalaryLegacy
 from bkanalysis.managers import TransformationManager, TransformationManagerCache, FigureManager
@@ -112,6 +112,26 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         return tabs.get_tab_3(df_capital.reset_index(), fig_capital_default)
 
     @app.callback(
+        Output("capital_fig", "figure"),
+        Input("capital_tbl", "active_cell"),  # fires on click
+        State("year-dropdown", "value"),
+    )
+    def update_capital(active_cell, selected_year):
+        if not active_cell:
+            # no click yet → don’t change graph
+            raise exceptions.PreventUpdate
+
+        start_date = datetime(selected_year, 1, 1)
+        end_date = datetime(selected_year, 12, 31)
+        date_range = [start_date, end_date]
+
+        row_idx = active_cell["row"]
+
+        # now re-build your figure based on that key
+        fig = figure_manager.get_capital_gain_brkdn(date_range=date_range, row_idx_to_plot=row_idx)[1]
+        return fig
+
+    @app.callback(
         Output("tab4", "children"),
         [Input("year-dropdown", "value")],
     )
@@ -121,4 +141,17 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         end_date = datetime(selected_year, 12, 31)
         date_range = [start_date, end_date]
 
-        return tabs.get_tab_4()
+        saving_ratio_annual = figure_manager.get_saving_rate_gauge(
+            figure_manager.get_saving_ratio(selected_year) * 100,
+            figure_manager.get_saving_ratio(selected_year - 1) * 100,
+            f"Saving Rate for Year {selected_year} (vs previous year)",
+        )
+        saving_ratio_monthly = figure_manager.get_saving_rate_gauge(
+            figure_manager.get_saving_ratio(selected_year, datetime.today().month - 1) * 100,
+            figure_manager.get_saving_ratio(selected_year, datetime.today().month - 2) * 100,
+            f"Saving Rate for Month {selected_year}-{datetime.today().month - 1} (vs previous month)",
+        )
+
+        income_vs_expenses = figure_manager.get_income_vs_expenses(date_range, True, True)
+
+        return tabs.get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly)

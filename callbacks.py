@@ -12,6 +12,15 @@ import tabs
 def register_callbacks(app, transformation_manager: TransformationManager | TransformationManagerCache, figure_manager: FigureManager, base_salary, categories):
     """registers the callbacks of the dash app"""
 
+    HOW = "out"  # default value for how to get the spending data
+
+    @staticmethod
+    def get_date_range(selected_year):
+        """Helper function to get the date range for the selected year."""
+        start_date = datetime(selected_year - 1, 12, 31)
+        end_date = datetime(selected_year, 12, 31)
+        return [start_date, end_date]
+
     @app.callback(
         Output("tab1", "children"),
         [Input("year-dropdown", "value"), Input("capital-gain-checkbox", "value")],
@@ -19,16 +28,13 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
     def update_tab_1(selected_year, include_capital_gain):
         """Callback to update the 'Wealth Breakdown' tab."""
         include_capital_gain = "include_capital_gain" in include_capital_gain  # Convert the list to a boolean
-
-        start_date = datetime(selected_year - 1, 12, 31)
-        end_date = datetime(selected_year, 12, 31)
-        date_range = [start_date, end_date]
+        date_range = get_date_range(selected_year)
 
         df_cash_account_type = transformation_manager.get_price_comparison_on_dates(date_range[0], date_range[1], True)
 
         total_value_start = df_cash_account_type.sum()[f"{date_range[0].date():%b-%y}"]
         total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
-        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how="out", include_iat=False).Value.sum()
+        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False).Value.sum()
 
         salary = prepare_salary(selected_year, date_range)
 
@@ -80,20 +86,22 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
     )
     def update_tab_2(selected_year, category):
         """Callback to update the 'Spending Detail' tab."""
-        start_date = datetime(selected_year, 1, 1)
-        end_date = datetime(selected_year, 12, 31)
-        date_range = [start_date, end_date]
-        how = "out"
+        date_range = get_date_range(selected_year)
 
-        fig_spend_brkdn = figure_manager.get_figure_sunburst(date_range=date_range, how=how)
-        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=how, include_iat=False).Value.sum()
+        fig_spend_brkdn = figure_manager.get_figure_sunburst(
+            date_range,
+            None,
+            include_iat=False,
+            how=HOW,
+        )
+        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False).Value.sum()
 
         category_key, category_value = category.split(": ")
         category_dict = {f"Full{category_key}": category_value}
         label = "MemoMapped"
 
-        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None, how=how)
-        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range, how=how)
+        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None, how=HOW)
+        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range, how=HOW)
 
         return tabs.get_tab_2(total_spend, category_value, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn)
 
@@ -103,9 +111,7 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
     )
     def update_tab_3(selected_year):
         """Callback to update the 'Capital Gain Breakdown' tab"""
-        start_date = datetime(selected_year, 1, 1)
-        end_date = datetime(selected_year, 12, 31)
-        date_range = [start_date, end_date]
+        date_range = get_date_range(selected_year)
 
         df_capital, fig_capital_default = figure_manager.get_capital_gain_brkdn(date_range=date_range)
 
@@ -121,13 +127,10 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
             # no click yet → don’t change graph
             raise exceptions.PreventUpdate
 
-        start_date = datetime(selected_year, 1, 1)
-        end_date = datetime(selected_year, 12, 31)
-        date_range = [start_date, end_date]
-
+        date_range = get_date_range(selected_year)
         row_idx = active_cell["row"]
 
-        # now re-build your figure based on that key
+        # re-build plot base on the new selected row
         fig = figure_manager.get_capital_gain_brkdn(date_range=date_range, row_idx_to_plot=row_idx)[1]
         return fig
 
@@ -137,9 +140,7 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
     )
     def update_tab_4(selected_year):
         """Callback to update the 'Capital Gain Breakdown' tab"""
-        start_date = datetime(selected_year, 1, 1)
-        end_date = datetime(selected_year, 12, 31)
-        date_range = [start_date, end_date]
+        date_range = get_date_range(selected_year)
 
         saving_ratio_annual = figure_manager.get_saving_rate_gauge(
             figure_manager.get_saving_ratio(selected_year) * 100,

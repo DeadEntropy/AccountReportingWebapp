@@ -12,7 +12,7 @@ import tabs
 def register_callbacks(app, transformation_manager: TransformationManager | TransformationManagerCache, figure_manager: FigureManager, base_salary, categories):
     """registers the callbacks of the dash app"""
 
-    HOW = "out"  # default value for how to get the spending data
+    HOW = "both"  # default value for how to get the spending data
 
     @staticmethod
     def get_date_range(selected_year):
@@ -34,7 +34,9 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
 
         total_value_start = df_cash_account_type.sum()[f"{date_range[0].date():%b-%y}"]
         total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
-        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False).Value.sum()
+        df_total_flow = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False)
+        df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
+        total_spend = df_total_spend.Value.sum()
 
         salary = prepare_salary(selected_year, date_range)
 
@@ -94,7 +96,10 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
             include_iat=False,
             how=HOW,
         )
-        total_spend = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False).Value.sum()
+
+        df_total_flow = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False)
+        df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
+        total_spend = df_total_spend.Value.sum()
 
         category_key, category_value = category.split(": ")
         category_dict = {f"Full{category_key}": category_value}

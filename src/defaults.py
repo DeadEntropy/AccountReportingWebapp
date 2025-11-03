@@ -37,3 +37,6 @@ THRESHOLD = 1000
 
 # Reporting Currency
 REF_CURRENCY = "USD"
+
+# Income Types
+INCOME_TYPES = ['Capital Earnings', 'Capital Gain', 'Salary' ,'Exceptional Income' , 'Tax']

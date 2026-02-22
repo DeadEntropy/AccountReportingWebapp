@@ -28,7 +28,7 @@ SALARY_CONFIG = {
 }
 
 # Year DrowDropdowndown
-YEARS = range(2016, 2026)
+YEARS = range(2016, 2027)
 
 # Category Dropdown
 DEFAULT_CATEGORY = "SubType: Grocery"

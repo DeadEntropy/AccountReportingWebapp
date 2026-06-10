@@ -12,7 +12,7 @@ def initialize_managers(ref_currency: str, default_year: int):
     """initialise the managers"""
     config = configparser.ConfigParser()
     if len(config.read(ch.source)) != 1:
-        raise OSError(f"no config found in {os.path.abspath(data_path)}")
+        raise OSError(f"no config found in {os.path.abspath(ch.source)}")
 
     data_path = os.getenv("DATA_PATH", "/data")
 

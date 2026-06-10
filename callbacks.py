@@ -9,6 +9,11 @@ from src import defaults
 import tabs
 
 
+def previous_month(year, month):
+    """Returns the (year, month) pair of the month preceding the given one."""
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
 def register_callbacks(app, transformation_manager: TransformationManager | TransformationManagerCache, figure_manager: FigureManager, base_salary, categories):
     """registers the callbacks of the dash app"""
 
@@ -144,8 +149,11 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         [Input("year-dropdown", "value")],
     )
     def update_tab_4(selected_year):
-        """Callback to update the 'Capital Gain Breakdown' tab"""
+        """Callback to update the 'Saving Rate' tab"""
         date_range = get_date_range(selected_year)
+
+        last_month_year, last_month = previous_month(selected_year, datetime.today().month)
+        prev_month_year, prev_month = previous_month(last_month_year, last_month)
 
         saving_ratio_annual = figure_manager.get_saving_rate_gauge(
             figure_manager.get_saving_ratio(selected_year) * 100,
@@ -153,9 +161,9 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
             f"Saving Rate for Year {selected_year} (vs previous year)",
         )
         saving_ratio_monthly = figure_manager.get_saving_rate_gauge(
-            figure_manager.get_saving_ratio(selected_year, datetime.today().month - 1) * 100,
-            figure_manager.get_saving_ratio(selected_year, datetime.today().month - 2) * 100,
-            f"Saving Rate for Month {selected_year}-{datetime.today().month - 1} (vs previous month)",
+            figure_manager.get_saving_ratio(last_month_year, last_month) * 100,
+            figure_manager.get_saving_ratio(prev_month_year, prev_month) * 100,
+            f"Saving Rate for Month {last_month_year}-{last_month:02d} (vs previous month)",
         )
 
         income_vs_expenses = figure_manager.get_income_vs_expenses(date_range, True, True)

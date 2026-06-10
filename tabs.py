@@ -7,9 +7,9 @@ ACCOUNT_TYPE = "AccountType"
 ASSET_MAPPED = "AssetMapped"
 
 
-def get_color(v):
+def get_color(v, threshold=500):
     """Returns the color to apply in a card based on a float value"""
-    return "text-success" if v > 0 else "text-danger" if v > 0 else "text-warning"
+    return "text-success" if v > threshold else "text-danger" if v < -threshold else "text-warning"
 
 
 def get_tab_1(
@@ -29,8 +29,8 @@ def get_tab_1(
     first_month = df_cash_account_type.columns[1]
     last_month = df_cash_account_type.columns[2]
 
-    capital_gain_color = get_color(capital_gain)
-    yoy_wealth_change_color = get_color(total_value_end - total_value_start)
+    capital_gain_color = get_color(capital_gain, threshold=500)
+    yoy_wealth_change_color = get_color(total_value_end - total_value_start, threshold=500)
 
     return dbc.Container(
         [
@@ -252,7 +252,7 @@ def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_cat
     """Returns the layout of the second tab"""
 
     category_spend = df_category_brkdn["Value"].sum()
-    category_spend_color = get_color(category_spend)
+    category_spend_color = get_color(category_spend, threshold=50)  # Use 0 as threshold for spending (positive is bad, negative is good)
 
     return dbc.Row(
         [

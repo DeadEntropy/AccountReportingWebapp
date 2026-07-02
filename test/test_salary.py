@@ -126,7 +126,7 @@ class TestSalary(unittest.TestCase):
         ref_currency = "USD"
         selected_year = 2024
 
-        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency, selected_year)
+        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency)
 
         start_date = datetime(selected_year - 1, 12, 31)
         end_date = datetime(selected_year, 12, 31)
@@ -138,7 +138,7 @@ class TestSalary(unittest.TestCase):
         ref_currency = "USD"
         selected_year = 2025
 
-        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency, selected_year)
+        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency)
 
         start_date = datetime(selected_year - 1, 12, 31)
         end_date = datetime(selected_year, 12, 31)

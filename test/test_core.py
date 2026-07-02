@@ -9,7 +9,7 @@ class TestCore(unittest.TestCase):
         ref_currency = "USD"
         selected_year = 2024
 
-        data_manager, market_manager, transformation_manager, figure_manager = app_initialisation.initialize_managers(ref_currency, selected_year)
+        data_manager, market_manager, transformation_manager, figure_manager = app_initialisation.initialize_managers(ref_currency)
 
         assert data_manager is not None, "DataManager should be initialized."
         assert market_manager is not None, "MarketManager should be initialized."
@@ -21,7 +21,7 @@ class TestCore(unittest.TestCase):
         ref_currency = "USD"
         selected_year = 2024
 
-        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency, selected_year)
+        _, _, transformation_manager, _ = app_initialisation.initialize_managers(ref_currency)
 
         total_value_start_1, total_value_end_1 = self._get_total_values(selected_year, transformation_manager)
 

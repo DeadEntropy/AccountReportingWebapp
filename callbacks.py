@@ -3,7 +3,7 @@ from datetime import datetime
 from dash import Input, Output, State, exceptions
 
 from bkanalysis.salary import Salary, SalaryLegacy
-from bkanalysis.managers import TransformationManager, TransformationManagerCache, FigureManager
+from bkanalysis.managers import TransformationManager, FigureManager
 
 from src import defaults
 import tabs
@@ -14,10 +14,14 @@ def previous_month(year, month):
     return (year - 1, 12) if month == 1 else (year, month - 1)
 
 
-def register_callbacks(app, transformation_manager: TransformationManager | TransformationManagerCache, figure_manager: FigureManager, base_salary, categories):
+def register_callbacks(app, transformation_manager: TransformationManager, figure_manager: FigureManager, base_salary, categories):
     """registers the callbacks of the dash app"""
 
     HOW = "both"  # default value for how to get the spending data
+
+    # Salary construction is expensive and the underlying data is immutable after
+    # startup, so build it at most once per selected year.
+    salary_cache = {}
 
     @staticmethod
     def get_date_range(selected_year):
@@ -37,8 +41,8 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
 
         df_cash_account_type = transformation_manager.get_price_comparison_on_dates(date_range[0], date_range[1], True)
 
-        total_value_start = df_cash_account_type.sum()[f"{date_range[0].date():%b-%y}"]
-        total_value_end = df_cash_account_type.sum()[f"{date_range[1].date():%b-%y}"]
+        total_value_start = df_cash_account_type[f"{date_range[0].date():%b-%y}"].sum()
+        total_value_end = df_cash_account_type[f"{date_range[1].date():%b-%y}"].sum()
         df_total_flow = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False)
         df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
         total_spend = df_total_spend.Value.sum()
@@ -63,7 +67,13 @@ def register_callbacks(app, transformation_manager: TransformationManager | Tran
         )
 
     def prepare_salary(selected_year, date_range):
-        """Prepare the salary object for the selected year."""
+        """Prepare the salary object for the selected year (cached per year)."""
+        if selected_year not in salary_cache:
+            salary_cache[selected_year] = build_salary(selected_year, date_range)
+        return salary_cache[selected_year]
+
+    def build_salary(selected_year, date_range):
+        """Build the salary object for the selected year."""
 
         if defaults.USE_LEGACY_SALARY_CLASS:
             return SalaryLegacy(

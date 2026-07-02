@@ -3,12 +3,10 @@ import configparser
 import os
 
 from bkanalysis.config import config_helper as ch
-from bkanalysis.managers import DataManager, MarketManager, TransformationManager, TransformationManagerCache, FigureManager
-
-USE_TRANSFORMATION_MANAGER_CACHE = False  # Set to True to use the cache version of TransformationManager
+from bkanalysis.managers import DataManager, MarketManager, TransformationManager, FigureManager
 
 
-def initialize_managers(ref_currency: str, default_year: int):
+def initialize_managers(ref_currency: str):
     """initialise the managers"""
     config = configparser.ConfigParser()
     if len(config.read(ch.source)) != 1:
@@ -23,10 +21,7 @@ def initialize_managers(ref_currency: str, default_year: int):
     market_manager = MarketManager(ref_currency)
     market_manager.load_pregenerated_data(os.path.join(data_path, "data_market.csv"))
 
-    if USE_TRANSFORMATION_MANAGER_CACHE:
-        transformation_manager = TransformationManagerCache(data_manager, market_manager, default_year, None, ["both", "out"])
-    else:
-        transformation_manager = TransformationManager(data_manager, market_manager)
+    transformation_manager = TransformationManager(data_manager, market_manager)
 
     figure_manager = FigureManager(transformation_manager)
 

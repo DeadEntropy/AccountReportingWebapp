@@ -21,7 +21,7 @@ REF_CURRENCY = "USD"
 DEFAULT_YEAR = datetime.today().year
 BASE_SALARY = {**{y: None for y in defaults.YEARS}, **{2024: defaults.BASE_SALARY_1}}
 
-data_manager, market_manager, transformation_manager, figure_manager = initialize_managers(REF_CURRENCY, DEFAULT_YEAR)
+data_manager, market_manager, transformation_manager, figure_manager = initialize_managers(REF_CURRENCY)
 
 CATEGORIES = transformation_manager.get_all_categories([datetime(DEFAULT_YEAR, 1, 1), datetime(DEFAULT_YEAR, 12, 31)], defaults.THRESHOLD)
 

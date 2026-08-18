@@ -58,13 +58,15 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
         df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
         total_spend = df_total_spend.Value.sum()
 
-        # These FullTypes are excluded from both total_spend and Received Salary above; sum them
-        # into a single card so no flow is invisible to the reconciliation.
-        other_income = df_total_flow[
-            df_total_flow.FullType.isin(["Capital Earnings", "Capital Gain", "Exceptional Income", "Tax"])
-        ].Value.sum()
-
         salary = prepare_salary(selected_year, flow_range)
+
+        # These FullTypes are excluded from both total_spend and Received Salary above; sum them,
+        # along with the Outstanding Salary, into a single card so no flow is invisible to the
+        # reconciliation.
+        other_income = (
+            df_total_flow[df_total_flow.FullType.isin(["Capital Earnings", "Capital Gain", "Exceptional Income", "Tax"])].Value.sum()
+            + salary.outstanding_salary
+        )
 
         capital_pnl = transformation_manager.get_values_by_asset(flow_range, None).CapitalGain.sum()
 

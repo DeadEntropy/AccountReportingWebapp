@@ -27,8 +27,7 @@ def get_iat_warning(iat_imbalance, threshold=500):
             html.Strong("Intra-account transfers do not net to zero: "),
             f"${iat_imbalance:,.0f}. ",
             "The wealth change and the flow-based figures (salary, spending, capital gain) "
-            "cannot reconcile by this amount. Check for a missing counterparty leg, a "
-            "transaction mis-tagged as a transfer, or a statement cut-off.",
+            "cannot reconcile by this amount.",
         ],
         color="warning",
         className="mb-3 py-2",
@@ -50,9 +49,10 @@ def get_tab_1(
     """Returns the layout of the first tab.
 
     other_income sums the FullTypes excluded from both total_spend and the Received Salary card
-    (Capital Earnings, realized Capital Gain, Exceptional Income, Tax — see defaults.INCOME_TYPES),
-    so that no flow is invisible across the tab's cards: YoY Wealth Change reconciles to Received
-    Salary + Capital Gain (Market) + Total Spending + Other Income, up to the IAT imbalance."""
+    (Capital Earnings, realized Capital Gain, Exceptional Income, Tax — see defaults.INCOME_TYPES)
+    plus salary.outstanding_salary, so that no flow is invisible across the tab's cards: YoY Wealth
+    Change reconciles to Received Salary + Capital Gain (Market) + Total Spending + Other Income,
+    up to the IAT imbalance."""
     assert df_cash_account_type.columns[0] == ACCOUNT_TYPE, f"Incorrect Columns, expected {ACCOUNT_TYPE} but got {df_cash_account_type.columns[0]}."
     assert len(df_cash_account_type.columns) == 3, f"Incorrect Columns count, expected 3 but got {len(df_cash_account_type.columns)}."
 
@@ -71,7 +71,11 @@ def get_tab_1(
                     # Separator
                     html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
                     *([iat_warning] if iat_warning is not None else []),
-                    # Main content section
+                    # Main content section — six cards at width=2 each so they all fit on one line
+                    # (2 * 6 = 12 grid columns). The last card sums the FullTypes excluded from
+                    # both Total Spending and Received Salary (Capital Earnings, realized Capital
+                    # Gain, Exceptional Income, Tax — see defaults.INCOME_TYPES) plus the
+                    # Outstanding Salary, so no flow is hidden.
                     dbc.Row(
                         [
                             # Card displaying total value
@@ -87,7 +91,8 @@ def get_tab_1(
                                         ]
                                     ),
                                     className="mb-3",
-                                )
+                                ),
+                                width=2,
                             ),
                             # Card displaying Year-on-Year change
                             dbc.Col(
@@ -102,7 +107,8 @@ def get_tab_1(
                                         ]
                                     ),
                                     className="mb-3",
-                                )
+                                ),
+                                width=2,
                             ),
                             # Card displaying Salary Perceived during that year value
                             dbc.Col(
@@ -120,25 +126,8 @@ def get_tab_1(
                                         ]
                                     ),
                                     className="mb-3",
-                                )
-                            ),
-                            # Card displaying Missing Salary for that year value
-                            dbc.Col(
-                                dbc.Card(
-                                    dbc.CardBody(
-                                        [
-                                            html.H4(
-                                                "Outstanding Salary",
-                                                className="card-title",
-                                            ),
-                                            html.H2(
-                                                f"${salary.outstanding_salary:,.0f}",
-                                                className="card-text text-warning fw-bold",
-                                            ),
-                                        ]
-                                    ),
-                                    className="mb-3",
-                                )
+                                ),
+                                width=2,
                             ),
                             # Card displaying Capital Gain/Loss during that year value
                             dbc.Col(
@@ -153,7 +142,8 @@ def get_tab_1(
                                         ]
                                     ),
                                     className="mb-3",
-                                )
+                                ),
+                                width=2,
                             ),
                             # Card displaying Total Spending during that year value
                             dbc.Col(
@@ -168,15 +158,10 @@ def get_tab_1(
                                         ]
                                     ),
                                     className="mb-3",
-                                )
+                                ),
+                                width=2,
                             ),
-                        ]
-                    ),
-                    # Card for the FullTypes excluded from both Total Spending and Received
-                    # Salary (Capital Earnings, realized Capital Gain, Exceptional Income, Tax —
-                    # see defaults.INCOME_TYPES), summed so no flow is hidden.
-                    dbc.Row(
-                        [
+                            # Card displaying the Other Income total (see note above)
                             dbc.Col(
                                 dbc.Card(
                                     dbc.CardBody(

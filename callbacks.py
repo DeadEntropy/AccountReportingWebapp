@@ -24,11 +24,21 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     salary_cache = {}
 
     @staticmethod
-    def get_date_range(selected_year):
-        """Helper function to get the date range for the selected year."""
-        start_date = datetime(selected_year - 1, 12, 31)
-        end_date = datetime(selected_year, 12, 31)
-        return [start_date, end_date]
+    def get_value_dates(selected_year):
+        """Snapshot dates used to measure wealth.
+
+        The opening balance of a year is the close of 31-Dec of the *previous* year, so these are
+        the two points a year-on-year change is measured between."""
+        return [datetime(selected_year - 1, 12, 31), datetime(selected_year, 12, 31)]
+
+    @staticmethod
+    def get_flow_range(selected_year):
+        """Window used for anything flow- or capital-gain-based: 1-Jan to 31-Dec inclusive.
+
+        Deliberately distinct from get_value_dates(): the filters downstream are inclusive at both
+        ends, so reusing the 31-Dec-of-previous-year snapshot date here would count that day's
+        transactions and price move in both the opening balance and the current year."""
+        return [datetime(selected_year, 1, 1), datetime(selected_year, 12, 31)]
 
     @app.callback(
         Output("tab1", "children"),
@@ -37,23 +47,35 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     def update_tab_1(selected_year, include_capital_gain):
         """Callback to update the 'Wealth Breakdown' tab."""
         include_capital_gain = "include_capital_gain" in include_capital_gain  # Convert the list to a boolean
-        date_range = get_date_range(selected_year)
+        value_dates = get_value_dates(selected_year)
+        flow_range = get_flow_range(selected_year)
 
-        df_cash_account_type = transformation_manager.get_price_comparison_on_dates(date_range[0], date_range[1], True)
+        df_cash_account_type = transformation_manager.get_price_comparison_on_dates(value_dates[0], value_dates[1], True)
 
-        total_value_start = df_cash_account_type[f"{date_range[0].date():%b-%y}"].sum()
-        total_value_end = df_cash_account_type[f"{date_range[1].date():%b-%y}"].sum()
-        df_total_flow = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False)
+        total_value_start = df_cash_account_type[f"{value_dates[0].date():%b-%y}"].sum()
+        total_value_end = df_cash_account_type[f"{value_dates[1].date():%b-%y}"].sum()
+        df_total_flow = transformation_manager.get_flow_values(flow_range[0], flow_range[1], None, how=HOW, include_iat=False)
         df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
         total_spend = df_total_spend.Value.sum()
 
-        salary = prepare_salary(selected_year, date_range)
+        # These FullTypes are excluded from both total_spend and Received Salary above; sum them
+        # into a single card so no flow is invisible to the reconciliation.
+        other_income = df_total_flow[
+            df_total_flow.FullType.isin(["Capital Earnings", "Capital Gain", "Exceptional Income", "Tax"])
+        ].Value.sum()
 
-        capital_pnl = transformation_manager.get_values_by_asset(date_range, None).CapitalGain.sum()
+        salary = prepare_salary(selected_year, flow_range)
 
-        fig_spend_waterfall = figure_manager.get_figure_waterfall(date_range, salary_override=salary, include_capital_gain=include_capital_gain)
+        capital_pnl = transformation_manager.get_values_by_asset(flow_range, None).CapitalGain.sum()
 
-        fig_wealth = figure_manager.get_figure_timeseries(date_range)
+        # IAT legs are excluded from every flow-based figure but still move the balances, so any
+        # residual is precisely the amount by which the cards above cannot reconcile to each other.
+        iat_imbalance, _ = transformation_manager.get_iat_imbalance(flow_range[0], flow_range[1])
+
+        fig_spend_waterfall = figure_manager.get_figure_waterfall(flow_range, salary_override=salary, include_capital_gain=include_capital_gain)
+
+        # the wealth chart is anchored on the opening balance so it lines up with the YoY card
+        fig_wealth = figure_manager.get_figure_timeseries(value_dates)
 
         return tabs.get_tab_1(
             df_cash_account_type,
@@ -64,6 +86,8 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
             capital_pnl,
             fig_spend_waterfall,
             fig_wealth,
+            iat_imbalance,
+            other_income,
         )
 
     def prepare_salary(selected_year, date_range):
@@ -103,16 +127,17 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     )
     def update_tab_2(selected_year, category):
         """Callback to update the 'Spending Detail' tab."""
-        date_range = get_date_range(selected_year)
+        flow_range = get_flow_range(selected_year)
 
         fig_spend_brkdn = figure_manager.get_figure_sunburst(
-            date_range,
+            flow_range,
             None,
             include_iat=False,
             how=HOW,
+            exclude_types=defaults.INCOME_TYPES,
         )
 
-        df_total_flow = transformation_manager.get_flow_values(date_range[0], date_range[1], None, how=HOW, include_iat=False)
+        df_total_flow = transformation_manager.get_flow_values(flow_range[0], flow_range[1], None, how=HOW, include_iat=False)
         df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
         total_spend = df_total_spend.Value.sum()
 
@@ -120,8 +145,8 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
         category_dict = {f"Full{category_key}": category_value}
         label = "MemoMapped"
 
-        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, date_range, None, how=HOW)
-        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, date_range, how=HOW)
+        df_category_brkdn = figure_manager.get_category_breakdown(category_dict, label, 10, flow_range, None, how=HOW)
+        fig_category_brkdn = figure_manager.get_figure_bar(category_dict, label, None, flow_range, how=HOW)
 
         return tabs.get_tab_2(total_spend, category_value, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn)
 
@@ -131,9 +156,9 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     )
     def update_tab_3(selected_year):
         """Callback to update the 'Capital Gain Breakdown' tab"""
-        date_range = get_date_range(selected_year)
+        flow_range = get_flow_range(selected_year)
 
-        df_capital, fig_capital_default = figure_manager.get_capital_gain_brkdn(date_range=date_range)
+        df_capital, fig_capital_default = figure_manager.get_capital_gain_brkdn(date_range=flow_range)
 
         return tabs.get_tab_3(df_capital.reset_index(), fig_capital_default)
 
@@ -147,11 +172,11 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
             # no click yet → don’t change graph
             raise exceptions.PreventUpdate
 
-        date_range = get_date_range(selected_year)
+        flow_range = get_flow_range(selected_year)
         row_idx = active_cell["row"]
 
         # re-build plot base on the new selected row
-        fig = figure_manager.get_capital_gain_brkdn(date_range=date_range, row_idx_to_plot=row_idx)[1]
+        fig = figure_manager.get_capital_gain_brkdn(date_range=flow_range, row_idx_to_plot=row_idx)[1]
         return fig
 
     @app.callback(
@@ -160,7 +185,7 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     )
     def update_tab_4(selected_year):
         """Callback to update the 'Saving Rate' tab"""
-        date_range = get_date_range(selected_year)
+        flow_range = get_flow_range(selected_year)
 
         last_month_year, last_month = previous_month(selected_year, datetime.today().month)
         prev_month_year, prev_month = previous_month(last_month_year, last_month)
@@ -176,6 +201,6 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
             f"Saving Rate for Month {last_month_year}-{last_month:02d} (vs previous month)",
         )
 
-        income_vs_expenses = figure_manager.get_income_vs_expenses(date_range, True, True)
+        income_vs_expenses = figure_manager.get_income_vs_expenses(flow_range, True, True)
 
         return tabs.get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly)

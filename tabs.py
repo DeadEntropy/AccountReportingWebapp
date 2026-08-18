@@ -12,6 +12,29 @@ def get_color(v, threshold=500):
     return "text-success" if v > threshold else "text-danger" if v < -threshold else "text-warning"
 
 
+def get_iat_warning(iat_imbalance, threshold=500):
+    """Banner shown when intra-account-transfer legs fail to net to zero.
+
+    They should always net to zero: an IAT moves value between two tracked accounts. A residual means
+    a leg is missing, mis-tagged, or straddles the data cut-off, and since IAT legs are excluded from
+    every flow-based figure while still moving the balances, that residual is exactly the amount by
+    which the flow view cannot reconcile to the change in wealth. Surfaced rather than hidden."""
+    if iat_imbalance is None or abs(iat_imbalance) <= threshold:
+        return None
+
+    return dbc.Alert(
+        [
+            html.Strong("Intra-account transfers do not net to zero: "),
+            f"${iat_imbalance:,.0f}. ",
+            "The wealth change and the flow-based figures (salary, spending, capital gain) "
+            "cannot reconcile by this amount. Check for a missing counterparty leg, a "
+            "transaction mis-tagged as a transfer, or a statement cut-off.",
+        ],
+        color="warning",
+        className="mb-3 py-2",
+    )
+
+
 def get_tab_1(
     df_cash_account_type,
     total_value_end,
@@ -21,8 +44,15 @@ def get_tab_1(
     capital_gain,
     fig_spend_waterfall,
     fig_wealth,
+    iat_imbalance=None,
+    other_income=0.0,
 ):
-    """Returns the layout of the first tab"""
+    """Returns the layout of the first tab.
+
+    other_income sums the FullTypes excluded from both total_spend and the Received Salary card
+    (Capital Earnings, realized Capital Gain, Exceptional Income, Tax — see defaults.INCOME_TYPES),
+    so that no flow is invisible across the tab's cards: YoY Wealth Change reconciles to Received
+    Salary + Capital Gain (Market) + Total Spending + Other Income, up to the IAT imbalance."""
     assert df_cash_account_type.columns[0] == ACCOUNT_TYPE, f"Incorrect Columns, expected {ACCOUNT_TYPE} but got {df_cash_account_type.columns[0]}."
     assert len(df_cash_account_type.columns) == 3, f"Incorrect Columns count, expected 3 but got {len(df_cash_account_type.columns)}."
 
@@ -31,6 +61,8 @@ def get_tab_1(
 
     capital_gain_color = get_color(capital_gain, threshold=500)
     yoy_wealth_change_color = get_color(total_value_end - total_value_start, threshold=500)
+    other_income_color = get_color(other_income, threshold=500)
+    iat_warning = get_iat_warning(iat_imbalance)
 
     return dbc.Container(
         [
@@ -38,6 +70,7 @@ def get_tab_1(
                 [
                     # Separator
                     html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+                    *([iat_warning] if iat_warning is not None else []),
                     # Main content section
                     dbc.Row(
                         [
@@ -112,7 +145,7 @@ def get_tab_1(
                                 dbc.Card(
                                     dbc.CardBody(
                                         [
-                                            html.H4("Capital Gain", className="card-title"),
+                                            html.H4("Capital Gain (Market)", className="card-title"),
                                             html.H2(
                                                 f"${capital_gain:,.0f}",
                                                 className=f"card-text {capital_gain_color} fw-bold",
@@ -136,6 +169,28 @@ def get_tab_1(
                                     ),
                                     className="mb-3",
                                 )
+                            ),
+                        ]
+                    ),
+                    # Card for the FullTypes excluded from both Total Spending and Received
+                    # Salary (Capital Earnings, realized Capital Gain, Exceptional Income, Tax —
+                    # see defaults.INCOME_TYPES), summed so no flow is hidden.
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                dbc.Card(
+                                    dbc.CardBody(
+                                        [
+                                            html.H4("Other Income", className="card-title"),
+                                            html.H2(
+                                                f"${other_income:,.0f}",
+                                                className=f"card-text {other_income_color} fw-bold",
+                                            ),
+                                        ]
+                                    ),
+                                    className="mb-3",
+                                ),
+                                width=2,
                             ),
                         ]
                     ),

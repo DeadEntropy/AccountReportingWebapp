@@ -4,7 +4,7 @@ from dash import dcc, html
 from src import defaults
 
 
-def get_control_panel(default_year, categories):
+def get_control_panel(default_year, categories, default_category):
     """generates the control panel of the app"""
     return dbc.Row(
         dbc.Col(
@@ -49,7 +49,11 @@ def get_control_panel(default_year, categories):
                                     dcc.Dropdown(
                                         id="category-dropdown",
                                         options=[{"label": category, "value": category} for category in categories],
-                                        value=defaults.DEFAULT_CATEGORY,
+                                        # Reconciled against `categories` by the caller:
+                                        # defaults.DEFAULT_CATEGORY is a fixed string while the
+                                        # options are thresholded per year, and clearable=False
+                                        # means an absent value is one the user cannot get back to.
+                                        value=default_category,
                                         clearable=False,
                                         style={"width": "300px"},  # Larger width for longer categories
                                     ),

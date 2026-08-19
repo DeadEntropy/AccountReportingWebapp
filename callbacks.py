@@ -9,36 +9,79 @@ from src import defaults
 import tabs
 
 
+HOW = "both"  # default value for how to get the spending data
+
+
 def previous_month(year, month):
     """Returns the (year, month) pair of the month preceding the given one."""
     return (year - 1, 12) if month == 1 else (year, month - 1)
 
 
-def register_callbacks(app, transformation_manager: TransformationManager, figure_manager: FigureManager, base_salary, categories):
-    """registers the callbacks of the dash app"""
+def get_value_dates(selected_year):
+    """Snapshot dates used to measure wealth.
 
-    HOW = "both"  # default value for how to get the spending data
+    The opening balance of a year is the close of 31-Dec of the *previous* year, so these are
+    the two points a year-on-year change is measured between."""
+    return [datetime(selected_year - 1, 12, 31), datetime(selected_year, 12, 31)]
+
+
+def get_flow_range(selected_year):
+    """Window used for anything flow- or capital-gain-based: 1-Jan to 31-Dec inclusive.
+
+    Deliberately distinct from get_value_dates(): the filters downstream are inclusive at both
+    ends, so reusing the 31-Dec-of-previous-year snapshot date here would count that day's
+    transactions and price move in both the opening balance and the current year."""
+    return [datetime(selected_year, 1, 1), datetime(selected_year, 12, 31)]
+
+
+def get_categories_for_year(transformation_manager: TransformationManager, selected_year, threshold=None):
+    """Category dropdown options for one year, as a plain list of strings.
+
+    get_all_categories returns a Series whose index is meaningless here, and `x in series` tests the
+    index rather than the values, so every caller wants a list."""
+    threshold = defaults.THRESHOLD if threshold is None else threshold
+    return list(transformation_manager.get_all_categories(get_flow_range(selected_year), threshold))
+
+
+def reconcile_category(categories, current_category):
+    """Category to keep selected once the option list has been rebuilt for a new year.
+
+    The dropdown is clearable=False, so a value outside `options` is one the user can never
+    re-select. Keep the current choice when it survives the year change, otherwise fall back to the
+    configured default and finally to whatever the year does offer."""
+    if current_category in categories:
+        return current_category
+    if defaults.DEFAULT_CATEGORY in categories:
+        return defaults.DEFAULT_CATEGORY
+    return categories[0] if categories else None
+
+
+def resolve_row_index(view_row, derived_virtual_indices):
+    """Map a DataTable view position back to the index of the underlying data row.
+
+    derived_virtual_indices is the post-sort, post-filter ordering of the source rows. Dash only
+    supplies it once sorting or filtering is enabled, so fall back to the view position."""
+    if not derived_virtual_indices or view_row is None or view_row >= len(derived_virtual_indices):
+        return view_row
+    return derived_virtual_indices[view_row]
+
+
+def register_callbacks(
+    app,
+    transformation_manager: TransformationManager,
+    figure_manager: FigureManager,
+    base_salary,
+    categories_by_year=None,
+):
+    """registers the callbacks of the dash app, and returns them keyed by name for profiling/tests"""
 
     # Salary construction is expensive and the underlying data is immutable after
     # startup, so build it at most once per selected year.
     salary_cache = {}
 
-    @staticmethod
-    def get_value_dates(selected_year):
-        """Snapshot dates used to measure wealth.
-
-        The opening balance of a year is the close of 31-Dec of the *previous* year, so these are
-        the two points a year-on-year change is measured between."""
-        return [datetime(selected_year - 1, 12, 31), datetime(selected_year, 12, 31)]
-
-    @staticmethod
-    def get_flow_range(selected_year):
-        """Window used for anything flow- or capital-gain-based: 1-Jan to 31-Dec inclusive.
-
-        Deliberately distinct from get_value_dates(): the filters downstream are inclusive at both
-        ends, so reusing the 31-Dec-of-previous-year snapshot date here would count that day's
-        transactions and price move in both the opening balance and the current year."""
-        return [datetime(selected_year, 1, 1), datetime(selected_year, 12, 31)]
+    # Categories are derived from the same immutable data, and app.py has already paid for the
+    # default year to render the initial layout, so seed the cache with what it computed.
+    category_cache = dict(categories_by_year or {})
 
     @app.callback(
         Output("tab1", "children"),
@@ -123,6 +166,26 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
             defaults.EXCLUDE_DEFAULT.copy(),
         )
 
+    def prepare_categories(selected_year):
+        """Category options for the selected year (cached per year)."""
+        if selected_year not in category_cache:
+            category_cache[selected_year] = get_categories_for_year(transformation_manager, selected_year)
+        return category_cache[selected_year]
+
+    @app.callback(
+        [Output("category-dropdown", "options"), Output("category-dropdown", "value")],
+        Input("year-dropdown", "value"),
+        State("category-dropdown", "value"),
+    )
+    def update_category_options(selected_year, current_category):
+        """Rebuild the category dropdown whenever the year changes.
+
+        get_all_categories drops anything below THRESHOLD, so the material categories differ from
+        year to year. Options built once for the default year would let the user pick a category
+        with no data in the selected year (tab 2 renders empty) and hide ones that do have data."""
+        categories = prepare_categories(selected_year)
+        return [{"label": category, "value": category} for category in categories], reconcile_category(categories, current_category)
+
     @app.callback(
         Output("tab2", "children"),
         [Input("year-dropdown", "value"), Input("category-dropdown", "value")],
@@ -143,7 +206,9 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
         df_total_spend = df_total_flow[~df_total_flow.FullType.isin(defaults.INCOME_TYPES)]
         total_spend = df_total_spend.Value.sum()
 
-        category_key, category_value = category.split(": ")
+        # Category names come from the data and may themselves contain ": ", so only the first
+        # separator delimits the key.
+        category_key, category_value = category.split(": ", 1)
         category_dict = {f"Full{category_key}": category_value}
         label = "MemoMapped"
 
@@ -167,15 +232,20 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
     @app.callback(
         Output("capital_fig", "figure"),
         Input("capital_tbl", "active_cell"),  # fires on click
+        State("capital_tbl", "derived_virtual_indices"),
         State("year-dropdown", "value"),
     )
-    def update_capital(active_cell, selected_year):
+    def update_capital(active_cell, derived_virtual_indices, selected_year):
+        """Callback to re-plot the 'Capital Gain Breakdown' chart for the clicked asset."""
         if not active_cell:
-            # no click yet → don’t change graph
+            # no click yet -> do not change graph
             raise exceptions.PreventUpdate
 
         flow_range = get_flow_range(selected_year)
-        row_idx = active_cell["row"]
+        # active_cell["row"] is a position in the rendered rows, while row_idx_to_plot indexes the
+        # freshly computed frame in its original order. They only coincide while the table is
+        # neither sorted nor filtered; derived_virtual_indices maps the view position back.
+        row_idx = resolve_row_index(active_cell["row"], derived_virtual_indices)
 
         # re-build plot base on the new selected row
         fig = figure_manager.get_capital_gain_brkdn(date_range=flow_range, row_idx_to_plot=row_idx)[1]
@@ -206,3 +276,12 @@ def register_callbacks(app, transformation_manager: TransformationManager, figur
         income_vs_expenses = figure_manager.get_income_vs_expenses(flow_range, True, True)
 
         return tabs.get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly)
+
+    return {
+        "update_tab_1": update_tab_1,
+        "update_tab_2": update_tab_2,
+        "update_tab_3": update_tab_3,
+        "update_tab_4": update_tab_4,
+        "update_capital": update_capital,
+        "update_category_options": update_category_options,
+    }

@@ -1,7 +1,7 @@
 from dash import dcc, html, dash_table
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
-from bkanalysis.ui.salary import Salary
+from bkanalysis.salary import Salary
 
 ACCOUNT_TYPE = "AccountType"
 ASSET_MAPPED = "AssetMapped"
@@ -291,8 +291,13 @@ def get_tab_1(
 def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn):
     """Returns the layout of the second tab"""
 
-    category_spend = df_category_brkdn["Value"].sum()
-    category_spend_color = get_color(category_spend, threshold=50)  # Use 0 as threshold for spending (positive is bad, negative is good)
+    # FigureManager.get_category_breakdown always returns [label, "Value"], including on its empty
+    # early returns, so address both columns positionally like the DataTable below does.
+    value_column = df_category_brkdn.columns[1]
+    category_spend = df_category_brkdn[value_column].sum()
+    # Spending arrives as a negative flow, so get_color already renders a large spend red. Its
+    # threshold is the band around zero that counts as neutral, not a sign convention.
+    category_spend_color = get_color(category_spend, threshold=50)
 
     return dbc.Row(
         [

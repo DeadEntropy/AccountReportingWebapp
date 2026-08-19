@@ -1,3 +1,5 @@
+from datetime import datetime
+
 # Salary
 DEFAULT_PAYROLLS_1 = ["NAYA BIOSCIENCES PAYROLL", "CYTOVIA THERAPEUTICS", "NAYA ONCOLOGY", "TRINET HR CORPORATE PAYROLL"]
 BASE_PAYROLL_1 = "NAYA_CYTOVIA"
@@ -27,8 +29,9 @@ SALARY_CONFIG = {
     },
 }
 
-# Year DrowDropdowndown
-YEARS = range(2016, 2027)
+# Year Dropdown. The upper bound follows the clock: app.py defaults the dropdown to the current
+# year, and a hardcoded end would leave that default outside the options once the year rolled over.
+YEARS = range(2016, datetime.today().year + 1)
 
 # Category Dropdown
 DEFAULT_CATEGORY = "SubType: Grocery"

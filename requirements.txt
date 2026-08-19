@@ -35,7 +35,7 @@ multitasking==0.0.11
 nest-asyncio==1.6.0
 numpy==2.2.1
 packaging==24.2
-pandas==2.2.3
+pandas>=3.0,<4
 peewee==3.17.8
 pillow==12.3.0
 platformdirs==4.3.6
@@ -59,6 +59,6 @@ urllib3==2.7.0
 webencodings==0.5.1
 websockets==17.0.1
 Werkzeug==3.0.6
-yahooquery==2.3.7
+yahooquery==2.4.1
 yfinance==1.6.0
 zipp==3.21.0

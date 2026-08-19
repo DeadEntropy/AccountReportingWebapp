@@ -1,4 +1,5 @@
 # app.py
+import os
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
@@ -12,7 +13,9 @@ from layouts.tabs_container import get_tabs
 from layouts.title import get_title
 from src import defaults
 
-USE_DARK_MODE = False
+# Read at startup rather than hardcoded: a module-level False makes every branch below dead code,
+# and flipping the theme should not need a source edit and a rebuild.
+USE_DARK_MODE = os.getenv("USE_DARK_MODE", "").strip().lower() in ("1", "true", "yes", "on")
 
 if USE_DARK_MODE:
     pio.templates.default = "plotly_dark"  # or your custom template

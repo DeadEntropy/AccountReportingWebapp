@@ -2,9 +2,11 @@
 import dash_bootstrap_components as dbc
 from dash import dcc
 
+TAB_BORDER = "1px solid #d6d6d6"
+
 tabs_styles = {"height": "44px", "alignItems": "center"}
 tab_style = {
-    "borderBottom": "1px solid #d6d6d6",
+    "borderBottom": TAB_BORDER,
     "padding": "6px",
     "fontWeight": "bold",
     "borderRadius": "15px",
@@ -13,8 +15,8 @@ tab_style = {
 }
 
 tab_selected_style = {
-    "borderTop": "1px solid #d6d6d6",
-    "borderBottom": "1px solid #d6d6d6",
+    "borderTop": TAB_BORDER,
+    "borderBottom": TAB_BORDER,
     "backgroundColor": "#119DFF",
     "color": "white",
     "padding": "6px",

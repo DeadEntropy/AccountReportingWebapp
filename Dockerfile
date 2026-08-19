@@ -13,8 +13,13 @@ COPY requirements.txt .
 # Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application into the container
-COPY . .
+# Copy only what the app needs at runtime. A recursive `COPY . .` would pull the build context in
+# wholesale -- tests, notebooks, docs, local config and any stray credentials -- into a published
+# image. config/config.ini is required: bkanalysis resolves it relative to the working directory.
+COPY app.py app_initialisation.py callbacks.py tabs.py ./
+COPY layouts/ ./layouts/
+COPY src/ ./src/
+COPY config/ ./config/
 
 # Expose the port the app will run on
 EXPOSE 8050

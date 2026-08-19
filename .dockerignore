@@ -1,6 +1,30 @@
-venv
-.devcontainer
+# The Dockerfile copies runtime files explicitly, so this is defence in depth: it keeps the build
+# context small and keeps anything sensitive out of it entirely.
+.git
+.gitattributes
+.gitignore
+.github
+.claude
 .vscode
 __pycache__
-Sandbox.ipynb
-acount_report-app.tar
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.venv
+venv
+
+test/
+notebooks/
+*.ipynb
+*.prof
+
+*.md
+LICENSE
+BUILD_HELP
+BUILD_HELP.bat
+*.code-workspace
+
+# Financial data is mounted at /data, never baked into the image.
+data/
+*.csv

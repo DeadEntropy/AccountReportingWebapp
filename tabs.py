@@ -1,10 +1,19 @@
 from dash import dcc, html, dash_table
 from dash.dash_table.Format import Format, Scheme
 import dash_bootstrap_components as dbc
-from bkanalysis.ui.salary import Salary
+from bkanalysis.salary import Salary
 
 ACCOUNT_TYPE = "AccountType"
 ASSET_MAPPED = "AssetMapped"
+PANEL_CLASS = "border p-3"  # bordered wrapper around a figure
+
+
+def section_separator():
+    """The horizontal rule that divides a tab into sections.
+
+    Returned fresh each call rather than shared as a module-level component, so the four call sites
+    cannot alias one instance."""
+    return html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"})
 
 
 def get_color(v, threshold=500):
@@ -69,7 +78,7 @@ def get_tab_1(
             dbc.Row(
                 [
                     # Separator
-                    html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+                    section_separator(),
                     *([iat_warning] if iat_warning is not None else []),
                     # Main content section — six cards at width=2 each so they all fit on one line
                     # (2 * 6 = 12 grid columns). The last card sums the FullTypes excluded from
@@ -264,7 +273,7 @@ def get_tab_1(
                                             style_as_list_view=True,  # Render rows more compactly
                                         ),
                                     ],
-                                    className="border p-3",
+                                    className=PANEL_CLASS,
                                 ),
                                 width=6,  # Adjust column width
                             ),
@@ -274,7 +283,7 @@ def get_tab_1(
                                     [
                                         dcc.Graph(figure=fig_spend_waterfall),
                                     ],
-                                    className="border p-3",
+                                    className=PANEL_CLASS,
                                 ),
                                 width=6,
                             ),
@@ -291,13 +300,18 @@ def get_tab_1(
 def get_tab_2(total_spend, category, fig_category_brkdn, fig_spend_brkdn, df_category_brkdn):
     """Returns the layout of the second tab"""
 
-    category_spend = df_category_brkdn["Value"].sum()
-    category_spend_color = get_color(category_spend, threshold=50)  # Use 0 as threshold for spending (positive is bad, negative is good)
+    # FigureManager.get_category_breakdown always returns [label, "Value"], including on its empty
+    # early returns, so address both columns positionally like the DataTable below does.
+    value_column = df_category_brkdn.columns[1]
+    category_spend = df_category_brkdn[value_column].sum()
+    # Spending arrives as a negative flow, so get_color already renders a large spend red. Its
+    # threshold is the band around zero that counts as neutral, not a sign convention.
+    category_spend_color = get_color(category_spend, threshold=50)
 
     return dbc.Row(
         [
             # Separator
-            html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+            section_separator(),
             dbc.Col(
                 [
                     dbc.Row(
@@ -476,14 +490,14 @@ def get_tab_3(capital_df, capital_fig):
 
     return dbc.Row(
         [
-            html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+            section_separator(),
             dbc.Col(
                 dbc.Row(
                     [
                         dbc.Col(dcc.Graph(id="capital_fig", figure=capital_fig), width=6),
                         dbc.Col(dash_tbl_capital, width=6),
                     ],
-                    className="border p-3",
+                    className=PANEL_CLASS,
                 ),
                 width=12,
             ),
@@ -496,7 +510,7 @@ def get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly):
 
     return dbc.Row(
         [
-            html.Hr(style={"borderTop": "2px solid #dee2e6", "marginTop": "10px", "marginBottom": "10px"}),
+            section_separator(),
             dbc.Col(
                 children=[
                     dbc.Row(
@@ -504,13 +518,13 @@ def get_tab_4(income_vs_expenses, saving_ratio_annual, saving_ratio_monthly):
                             dbc.Col(dcc.Graph(id="saving_ratio_annual_fig", figure=saving_ratio_annual), width=6),
                             dbc.Col(dcc.Graph(id="saving_ratio_monthly_fig", figure=saving_ratio_monthly), width=6),
                         ],
-                        className="border p-3",
+                        className=PANEL_CLASS,
                     ),
                     dbc.Row(
                         [
                             dbc.Col(dcc.Graph(id="income_vs_expenses_fig", figure=income_vs_expenses), width=12),
                         ],
-                        className="border p-3",
+                        className=PANEL_CLASS,
                     ),
                 ],
                 width=12,

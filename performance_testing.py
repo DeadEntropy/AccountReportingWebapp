@@ -2,16 +2,18 @@
 
 from datetime import datetime
 
-import cProfile, pstats
+import cProfile
 
-
-from app import update_tab_2  # Import the function to profile
+# Importing app runs initialize_managers, which is what the profiled callbacks read from.
+# register_callbacks returns its callbacks keyed by name: they are closures over the managers and
+# are not importable from app's module scope.
+import app
 
 
 def run_server():
     """Code to profile goes here"""
 
-    update_tab_2(2024, "SubType: Grocery")
+    app.callbacks["update_tab_2"](2024, "SubType: Grocery")
 
 
 def run_app_with_profiling():
